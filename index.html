@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>حاسبة تقييم مخاطر الصيام</title>
+
+  <style>
+    :root{
+      --bg:#f3efe8;            /* بني فاتح جدًا */
+      --card:#ffffff;
+      --text:#1f2d3d;
+      --muted:#5b6772;
+      --border:#e4dfd6;
+
+      --ok:#1e8449; --mid:#7d6608; --hi:#922b21;
+      --okbg:#eafaf1; --midbg:#fff8e1; --hibg:#fdecea;
+
+      --btn:#6aaed6;            /* أزرق فاتح */
+      --btn2:#b38b5d;           /* بني فاتح */
+    }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0; background:var(--bg); color:var(--text);
+      font-family:"Segoe UI",Tahoma,Arial,sans-serif; line-height:1.6;
+    }
+    .wrap{max-width:1020px;margin:0 auto;padding:18px;}
+    .header{
+      background:var(--card); border:1px solid var(--border);
+      border-radius:18px; padding:18px; box-shadow:0 4px 12px rgba(0,0,0,.06);
+      display:flex; gap:16px; align-items:center; flex-wrap:wrap;
+      position:relative; overflow:hidden;
+    }
+    /* لمسة رمضانية رسمية (تدرج ناعم + دوائر) */
+    .header::before{
+      content:""; position:absolute; inset:-50px -50px auto -50px; height:150px;
+      background:linear-gradient(90deg, rgba(179,139,93,.18), rgba(106,174,214,.18));
+    }
+    .header::after{
+      content:""; position:absolute; left:20px; top:18px; width:120px; height:120px;
+      border-radius:999px; border:2px solid rgba(106,174,214,.35);
+      box-shadow:0 0 0 14px rgba(179,139,93,.12) inset;
+    }
+    .header > *{position:relative; z-index:1}
+
+    .logo{
+      width:92px;height:92px;border-radius:18px;object-fit:contain;
+      border:1px solid var(--border);background:#fff;
+    }
+    h1{margin:0;font-size:1.35rem}
+    .sub{margin:.4rem 0 0;color:var(--muted);font-size:.95rem}
+    .pillrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .pill{
+      font-size:.86rem;border:1px solid var(--border);
+      padding:6px 10px;border-radius:999px;background:#faf7f2;color:#334;
+    }
+
+    .grid{display:grid;grid-template-columns:1fr;gap:14px;margin-top:14px;}
+    @media (min-width: 920px){ .grid{grid-template-columns: 1.2fr .8fr;} }
+
+    .card{
+      background:var(--card);border:1px solid var(--border);
+      border-radius:18px;padding:16px;box-shadow:0 4px 12px rgba(0,0,0,.05);
+    }
+    .card h2{margin:0 0 10px;font-size:1.12rem}
+
+    .note{
+      background:#fbfbfc;border:1px dashed var(--border);
+      padding:10px 12px;border-radius:12px;color:var(--muted);font-size:.92rem;
+    }
+
+    details{
+      border:1px solid var(--border);border-radius:14px;
+      padding:10px 12px;background:#fff;margin:10px 0;
+    }
+    summary{cursor:pointer;font-weight:700;padding:4px 0;}
+    summary small{font-weight:400;color:var(--muted)}
+
+    .row{display:grid;grid-template-columns:1fr;gap:10px;margin-top:10px;}
+    @media (min-width: 720px){ .row{grid-template-columns:1fr 1fr;} }
+
+    label{display:block;font-weight:600;margin:8px 0 6px;}
+    select,input[type="text"],input[type="number"],input[type="date"]{
+      width:100%;padding:10px;border-radius:12px;border:1px solid var(--border);
+      background:#fff;font-size:1rem;
+    }
+
+    .checks{display:grid;grid-template-columns:1fr;gap:8px;margin-top:10px;}
+    @media (min-width: 720px){ .checks{grid-template-columns:1fr 1fr;} }
+
+    .check{
+      display:flex;gap:10px;align-items:flex-start;padding:10px;
+      border:1px solid var(--border);border-radius:12px;background:#fcfdff;
+    }
+    .check input{margin-top:4px}
+    .check b{display:block}
+    .check span{display:block;color:var(--muted);font-size:.9rem}
+
+    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;}
+    button{
+      border:0;border-radius:12px;padding:11px 14px;cursor:pointer;font-size:1rem;
+    }
+    .primary{background:var(--btn);color:#fff;}
+    .secondary{background:var(--btn2);color:#fff;}
+    .ghost{background:#eef2f4;color:#233;border:1px solid var(--border);}
+
+    .resultBox{margin-top:12px;border-radius:14px;padding:12px;border:1px solid var(--border);}
+    .low{background:var(--okbg);color:var(--ok);}
+    .med{background:var(--midbg);color:var(--mid);}
+    .high{background:var(--hibg);color:var(--hi);}
+
+    .bigScore{font-size:1.85rem;font-weight:800;margin:0}
+    .small{color:var(--muted);margin:6px 0 0;font-size:.95rem}
+
+    table{width:100%;border-collapse:collapse;margin-top:10px;}
+    th,td{border-bottom:1px solid var(--border);text-align:right;padding:8px;font-size:.95rem;}
+    th{background:#faf7f2}
+
+    .qrArea{
+      margin-top:14px;padding-top:12px;border-top:1px solid var(--border);
+      display:grid;grid-template-columns:1fr;gap:12px;align-items:center;
+    }
+    @media (min-width: 720px){ .qrArea{grid-template-columns: 1fr auto;} }
+
+    .qr{
+      width:170px;height:170px;border:1px solid var(--border);
+      border-radius:14px;background:#fff;padding:8px;
+    }
+    a{color:#0b62a4;text-decoration:none}
+    a:hover{text-decoration:underline}
+
+    footer{
+      margin:18px 0 8px;text-align:center;color:var(--muted);font-size:.95rem;
+    }
+    .printHint{font-size:.9rem;color:var(--muted);margin-top:8px}
+
+    @media print{
+      body{background:#fff}
+      .wrap{max-width:none;padding:0}
+      .actions,.printHint{display:none !important}
+      details{break-inside:avoid}
+      .card,.header{box-shadow:none}
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="header">
+      <!-- ارفع الشعار داخل نفس المستودع باسم: logo.png -->
+      <img class="logo" src="logo.png" alt="شعار العيادة" onerror="this.style.display='none';" />
+      <div>
+        <h1>حاسبة تقييم مخاطر الصيام على أعزائنا مرضى السكري قبل رمضان</h1>
+        <p class="sub">
+          أداة تثقيفية مبنية على عناصر <b>DAR Risk Assessment Tool (2026)</b> لتقدير مستوى مخاطر الصيام.
+          لا تغني عن التقييم الطبي الفردي ولا عن قرار الطبيب وخطة العلاج والمتابعة.
+        </p>
+        <div class="pillrow">
+          <span class="pill">نسخة عيادية</span>
+          <span class="pill">لغة واضحة ومحايدة</span>
+          <span class="pill">عرض تفاصيل النقاط + طباعة</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <!-- نموذج التقييم -->
+      <div class="card">
+        <h2>عناصر التقييم (DAR 2026)</h2>
+
+        <div class="note">
+          املأ بيانات المريض أولًا، ثم اختر الإجابة الأنسب في كل بند.
+          في بند <b>نوع العلاج</b> يمكنك اختيار أكثر من خيار (اختر كل ما ينطبق).
+          في النهاية اضغط <b>احسب النتيجة</b> لعرض مجموع النقاط ومستوى المخاطر.
+        </div>
+
+        <!-- بيانات المريض -->
+        <details open>
+          <summary>بيانات المريض <small>(تظهر أيضًا عند الطباعة)</small></summary>
+          <div class="row">
+            <div>
+              <label for="pname">اسم المريض</label>
+              <input id="pname" type="text" placeholder="اكتب اسم المريض (اختياري)" />
+            </div>
+            <div>
+              <label for="page">العمر</label>
+              <input id="page" type="number" min="0" max="120" placeholder="مثال: 45" />
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label for="psex">الجنس</label>
+              <select id="psex">
+                <option value="">اختر</option>
+                <option value="ذكر">ذكر</option>
+                <option value="أنثى">أنثى</option>
+              </select>
+            </div>
+            <div>
+              <label for="pdate">تاريخ التقييم</label>
+              <input id="pdate" type="date" />
+            </div>
+          </div>
+          <div class="note" style="margin-top:10px">
+            ملاحظة خصوصية: إدخال البيانات اختياري. لا يتم حفظ أي معلومات أو إرسالها؛ الحاسبة تعمل داخل المتصفح فقط.
+          </div>
+        </details>
+
+        <!-- 1) الحمل -->
+        <details>
+          <summary>1) الحمل مع أي نوع من السكري <small>(إن وجد)</small></summary>
+          <label for="preg">هل توجد حالة حمل؟</label>
+          <select id="preg">
+            <option value="0">لا (0)</option>
+            <option value="6.5">نعم (+6.5)</option>
+          </select>
+        </details>
+
+        <!-- 2 + 3 -->
+        <details>
+          <summary>2) نوع السكري + 3) مدة الإصابة</summary>
+          <div class="row">
+            <div>
+              <label for="dtype">نوع السكري</label>
+              <select id="dtype">
+                <option value="0">النوع الثاني أو أي نوع آخر (0)</option>
+                <option value="1">النوع الأول أو LADA (+1)</option>
+              </select>
+            </div>
+            <div>
+              <label for="ddur">مدة الإصابة بالسنوات</label>
+              <select id="ddur">
+                <option value="0">أقل من 10 سنوات (0)</option>
+                <option value="0.5">من 10 إلى 20 سنة (+0.5)</option>
+                <option value="1">أكثر من 20 سنة (+1)</option>
+              </select>
+            </div>
+          </div>
+        </details>
+
+        <!-- 4) العلاج -->
+        <details>
+          <summary>4) نوع علاج السكري <small>(اختر كل ما ينطبق)</small></summary>
+
+          <div class="checks" id="txChecks">
+            <label class="check"><input type="checkbox" data-score="2">
+              <div><b>حقن أنسولين مخلوط عدة مرات يوميًا</b><span>(+2)</span></div>
+            </label>
+
+            <label class="check"><input type="checkbox" data-score="1.5">
+              <div><b>أنسولين مخلوط مرة واحدة يوميًا</b><span>(+1.5)</span></div>
+            </label>
+
+            <label class="check"><input type="checkbox" data-score="1.5">
+              <div><b>مضخة أنسولين (حلقة مفتوحة)</b><span>(+1.5)</span></div>
+            </label>
+
+            <label class="check"><input type="checkbox" data-score="1">
+              <div><b>نظام توصيل أنسولين آلي (AID)</b><span>(+1)</span></div>
+            </label>
+
+            <label class="check"><input type="checkbox" data-score="1">
+              <div><b>أنسولين قاعدي قياسي (NPH/Detemir/Glargine 100)</b><span>(+1)</span></div>
+            </label>
+
+            <label class="check"><input type="checkbox" data-score="0.75">
+              <div><b>أنسولين قاعدي فائق/طويل جدًا (Glargine 300 أو Degludec)</b><span>(+0.75)</span></div>
+            </label>
+
+            <label class="check"><input type="checkbox" data-score="0.75">
+              <div><b>أنسولين قصير/سريع المفعول</b><span>(+0.75)</span></div>
+            </label>
+
+            <label class="check"><input type="checkbox" data-score="0.75">
+              <div><b>غليبينكلاميد أو غليبيزيد</b><span>(+0.75)</span></div>
+            </label>
+
+            <label class="check"><input type="checkbox" data-score="0.5">
+              <div><b>سلفونيل يوريا حديثة أو ريباكلينيد</b><span>(+0.5)</span></div>
+            </label>
+
+            <label class="check"><input type="checkbox" data-score="0.25">
+              <div><b>أكثر من دوائين خافضين للسكر (باستثناء الأنسولين/السلفونيل يوريا)</b><span>(+0.25)</span></div>
+            </label>
+
+            <label class="check"><input type="checkbox" data-score="0">
+              <div><b>تعديل نمط الحياة فقط أو علاج أحادي (غير أنسولين/غير سلفونيل يوريا)</b><span>(0)</span></div>
+            </label>
+          </div>
+
+          <div class="note" style="margin-top:10px">
+            اختر العلاج/العلاجات المستخدمة حاليًا. سيتم جمع نقاط الخيارات المحددة (كما في أداة DAR).
+          </div>
+        </details>
+
+        <!-- 5 + 6 + 7 -->
+        <details>
+          <summary>5) انخفاض السكر + 6) HbA1c + 7) مراقبة الجلوكوز</summary>
+          <div class="row">
+            <div>
+              <label for="hypo">نوبات انخفاض سكر الدم (آخر 4 أسابيع)</label>
+              <select id="hypo">
+                <option value="0">لا يوجد (0)</option>
+                <option value="0.5">أقل من مرة أسبوعيًا (+0.5)</option>
+                <option value="1">1–2 نوبة أسبوعيًا (+1)</option>
+                <option value="2">3–5 نوبات أسبوعيًا (+2)</option>
+                <option value="3">6–7 نوبات أسبوعيًا (+3)</option>
+                <option value="4">أكثر من مرة يوميًا (+4)</option>
+                <option value="5">نوبة شديدة خلال آخر 4 أسابيع (+5)</option>
+                <option value="6.5">ضعف/انعدام الإحساس بانخفاض السكر (+6.5)</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="a1c">HbA1c (آخر قراءة)</label>
+              <select id="a1c">
+                <option value="0">أقل من 7.5% (0)</option>
+                <option value="0.5">من 7.5% إلى 9% (+0.5)</option>
+                <option value="1">أعلى من 9% (+1)</option>
+              </select>
+            </div>
+          </div>
+
+          <label for="gmon" style="margin-top:10px">مراقبة الجلوكوز</label>
+          <select id="gmon">
+            <option value="2">لم تُجرَ المراقبة (+2)</option>
+            <option value="1">أُجريت بشكل غير مثالي (+1)</option>
+            <option value="0">أُجريت كما هو موصى (0)</option>
+            <option value="-0.5">استخدام جهاز مراقبة مستمرة CGM (-0.5)</option>
+          </select>
+        </details>
+
+        <!-- 8 + 9 -->
+        <details>
+          <summary>8) طوارئ فرط السكر + 9) مضاعفات وعائية كبرى</summary>
+          <div class="row">
+            <div>
+              <label for="hyperE">DKA أو HHS (آخر 6 أشهر)</label>
+              <select id="hyperE">
+                <option value="0">لا يوجد (0)</option>
+                <option value="1">خلال 4–6 أشهر (+1)</option>
+                <option value="2">خلال 2–3 أشهر (+2)</option>
+                <option value="3.5">خلال الشهر الماضي (+3.5)</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="macroV">مرض وعائي كبير (قلب/سكتة/شرايين طرفية)</label>
+              <select id="macroV">
+                <option value="0">لا يوجد (0)</option>
+                <option value="2">موجود ومستقر (+2)</option>
+                <option value="6.5">غير مستقر/حديث (+6.5)</option>
+              </select>
+            </div>
+          </div>
+        </details>
+
+        <!-- 10 -->
+        <details>
+          <summary>10) مضاعفات وعائية صغرى</summary>
+          <div class="row">
+            <div>
+              <label for="egfr">أ) وظائف الكلى (eGFR)</label>
+              <select id="egfr">
+                <option value="0">أكبر من 60 (0)</option>
+                <option value="2">45 إلى 60 (+2)</option>
+                <option value="4">30 إلى 45 (+4)</option>
+                <option value="6.5">أقل من 30 (+6.5)</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="microC">ب) اعتلال الأعصاب/القدم/الشبكية (عدد المضاعفات)</label>
+              <select id="microC">
+                <option value="0">لا توجد (0)</option>
+                <option value="1">مضاعفة واحدة (+1)</option>
+                <option value="2">مضاعفتان (+2)</option>
+                <option value="3">ثلاث مضاعفات (+3)</option>
+              </select>
+            </div>
+          </div>
+        </details>
+
+        <!-- 11 + 12 + 13 + 14 -->
+        <details>
+          <summary>11) الإدراك/الهشاشة/العمر + 12) العمل البدني + 13) التثقيف + 14) ساعات الصيام</summary>
+          <div class="row">
+            <div>
+              <label for="cog">الإدراك/الهشاشة/العمر</label>
+              <select id="cog">
+                <option value="0">طبيعي ولا توجد هشاشة (0)</option>
+                <option value="1">العمر أكبر من 70 سنة دون دعم منزلي (+1)</option>
+                <option value="4">هشاشة خفيفة إلى متوسطة (+4)</option>
+                <option value="6.5">هشاشة متقدمة (+6.5)</option>
+                <option value="6.5">ضعف إدراكي (+6.5)</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="labor">العمل البدني</label>
+              <select id="labor">
+                <option value="0">شدة منخفضة (0)</option>
+                <option value="2">شدة متوسطة (+2)</option>
+                <option value="4">شدة عالية (+4)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label for="edu">التثقيف الموجه للصيام</label>
+              <select id="edu">
+                <option value="0">تم تقديم التثقيف (0)</option>
+                <option value="1">لم يتم تقديم التثقيف (+1)</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="fhours">عدد ساعات الصيام المتوقعة</label>
+              <select id="fhours">
+                <option value="0">أقل من 16 ساعة (0)</option>
+                <option value="1">16 ساعة أو أكثر (+1)</option>
+              </select>
+            </div>
+          </div>
+        </details>
+
+        <div class="actions">
+          <button class="primary" type="button" onclick="calc()">احسب النتيجة</button>
+          <button class="ghost" type="button" onclick="resetAll()">إعادة تعيين</button>
+          <button class="secondary" type="button" onclick="window.print()">طباعة</button>
+        </div>
+        <div class="printHint">للعيادة: يمكن طباعة النتيجة أو حفظها PDF من شاشة الطباعة.</div>
+      </div>
+
+      <!-- النتائج -->
+      <div class="card">
+        <h2>النتيجة</h2>
+
+        <div id="patientPrint" class="note" style="margin-top:10px; display:none;"></div>
+
+        <div class="note">
+          تفسير مستوى المخاطر هنا <b>إرشادي</b>. القرار النهائي للصيام يجب أن يكون بعد تقييم طبي فردي وخطة علاج مناسبة.
+        </div>
+
+        <div id="res" class="resultBox" style="margin-top:12px;">
+          <p class="bigScore">—</p>
+          <p class="small">اضغط “احسب النتيجة” لعرض مجموع النقاط.</p>
+        </div>
+
+        <div id="detailArea" style="margin-top:12px; display:none;">
+          <h3 style="margin:0 0 8px; font-size:1.05rem;">تفاصيل النقاط</h3>
+          <table>
+            <thead><tr><th>البند</th><th>النقاط</th></tr></thead>
+            <tbody id="detailsTbody"></tbody>
+          </table>
+        </div>
+
+        <div class="qrArea">
+          <div>
+            <h3 style="margin:0 0 6px; font-size:1.05rem;">الوصول السريع للأداة</h3>
+            <div class="note" style="margin:0">
+              <div>الرابط المباشر:</div>
+              <div style="margin-top:6px; font-weight:700;">
+                <a id="directLink" href="#" target="_blank" rel="noopener"></a>
+              </div>
+            </div>
+          </div>
+          <img class="qr" id="qrImg" alt="QR Code" />
+        </div>
+
+        <div class="card" style="margin-top:12px; border:1px solid var(--border); background:#fff;">
+          <h3 style="margin:0 0 8px; font-size:1.05rem;">دعاء رمضان</h3>
+          <div class="note" style="margin:0; font-size:1rem; color:#2b3a4a;">
+            اللهم بلغنا رمضان مُعافين، مقبولين، مطمئنين، مجبورين الخاطر، في ظلال رحمتك وعفوك.
+          </div>
+        </div>
+
+        <footer>
+          شكرًا لكم 🌙<br/>
+          عمل وتنسيق الأخصائية: <strong>تمارا عبدالرحمن حافظ</strong><br/>
+          مدربة ومثقفة مرضى السكري
+        </footer>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // ضع رابط GitHub Pages الخاص بك هنا (نفس رابطك الحالي)
+  const TOOL_URL = "https://tamara15951.github.io/ramadan-diabetes-risk/";
+
+  function setQR(){
+    const qr = document.getElementById("qrImg");
+    const link = document.getElementById("directLink");
+    link.href = TOOL_URL;
+    link.textContent = TOOL_URL;
+    qr.src = "https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=" + encodeURIComponent(TOOL_URL);
+  }
+
+  function setToday(){
+    const el = document.getElementById("pdate");
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth()+1).padStart(2,"0");
+    const dd = String(d.getDate()).padStart(2,"0");
+    el.value = `${yyyy}-${mm}-${dd}`;
+  }
+
+  function escapeHtml(str){
+    return String(str)
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll("\"","&quot;")
+      .replaceAll("'","&#039;");
+  }
+
+  function sumTreatmentScores(){
+    let total = 0;
+    document.querySelectorAll("#txChecks input[type='checkbox']").forEach(ch => {
+      if(ch.checked) total += parseFloat(ch.dataset.score);
+    });
+    return total;
+  }
+
+  function fmt(n){ return (Math.round(n * 100) / 100).toString(); }
+
+  function calc(){
+    const parts = [];
+
+    const preg  = parseFloat(document.getElementById("preg").value);   parts.push(["الحمل", preg]);
+    const dtype = parseFloat(document.getElementById("dtype").value);  parts.push(["نوع السكري", dtype]);
+    const ddur  = parseFloat(document.getElementById("ddur").value);   parts.push(["مدة الإصابة", ddur]);
+
+    const tx = sumTreatmentScores();                                   parts.push(["نوع العلاج (مجموع الخيارات)", tx]);
+
+    const hypo = parseFloat(document.getElementById("hypo").value);    parts.push(["انخفاض السكر", hypo]);
+    const a1c  = parseFloat(document.getElementById("a1c").value);     parts.push(["HbA1c", a1c]);
+    const gmon = parseFloat(document.getElementById("gmon").value);    parts.push(["مراقبة الجلوكوز", gmon]);
+
+    const hyperE = parseFloat(document.getElementById("hyperE").value);parts.push(["طوارئ فرط السكر (DKA/HHS)", hyperE]);
+    const macroV = parseFloat(document.getElementById("macroV").value);parts.push(["مضاعفات وعائية كبرى", macroV]);
+
+    const egfr  = parseFloat(document.getElementById("egfr").value);   parts.push(["وظائف الكلى (eGFR)", egfr]);
+    const microC= parseFloat(document.getElementById("microC").value); parts.push(["مضاعفات وعائية صغرى أخرى", microC]);
+
+    const cog   = parseFloat(document.getElementById("cog").value);    parts.push(["الإدراك/الهشاشة/العمر", cog]);
+    const labor = parseFloat(document.getElementById("labor").value);  parts.push(["العمل البدني", labor]);
+    const edu   = parseFloat(document.getElementById("edu").value);    parts.push(["التثقيف الموجه للصيام", edu]);
+    const fhours= parseFloat(document.getElementById("fhours").value); parts.push(["ساعات الصيام", fhours]);
+
+    const total = parts.reduce((acc, p) => acc + p[1], 0);
+
+    // تصنيف إرشادي شائع: منخفض ≤3 | متوسط >3 إلى 6 | مرتفع >6
+    let level="", cls="", guidance="";
+    if(total <= 3){
+      level="مخاطر منخفضة";
+      cls="low";
+      guidance="غالبًا يمكن الصيام مع الالتزام بإرشادات الطبيب وخطة المراقبة وتعديل العلاج عند الحاجة.";
+    }else if(total <= 6){
+      level="مخاطر متوسطة";
+      cls="med";
+      guidance="يمكن الصيام بحذر مع متابعة لصيقة وتعديل علاجي واضح وخطة قياس سكر منتظمة.";
+    }else{
+      level="مخاطر مرتفعة";
+      cls="high";
+      guidance="قد لا يكون الصيام آمنًا. يُنصح بمناقشة البدائل والرخص الشرعية مع الطبيب حفاظًا على الصحة.";
+    }
+
+    // عرض بيانات المريض (إن وُجدت)
+    const pname = (document.getElementById("pname").value || "").trim();
+    const page  = (document.getElementById("page").value || "").toString().trim();
+    const psex  = document.getElementById("psex").value;
+    const pdate = document.getElementById("pdate").value;
+
+    const pLines = [];
+    if (pname) pLines.push(`<b>اسم المريض:</b> ${escapeHtml(pname)}`);
+    if (page)  pLines.push(`<b>العمر:</b> ${escapeHtml(page)} سنة`);
+    if (psex)  pLines.push(`<b>الجنس:</b> ${escapeHtml(psex)}`);
+    if (pdate) pLines.push(`<b>تاريخ التقييم:</b> ${escapeHtml(pdate)}`);
+
+    const patientBox = document.getElementById("patientPrint");
+    if (pLines.length){
+      patientBox.innerHTML = pLines.join(" &nbsp; | &nbsp; ");
+      patientBox.style.display = "block";
+    }else{
+      patientBox.style.display = "none";
+    }
+
+    // النتيجة
+    const res = document.getElementById("res");
+    res.className = "resultBox " + cls;
+    res.innerHTML = `
+      <p class="bigScore">${fmt(total)} نقطة</p>
+      <p class="small"><b>${level}</b> — ${guidance}</p>
+      <p class="small" style="margin-top:8px;">
+        تنبيه: هذه النتيجة تثقيفية ولا تُعد فتوى أو قرارًا طبيًا نهائيًا.
+      </p>
+    `;
+
+    // تفاصيل النقاط
+    const tbody = document.getElementById("detailsTbody");
+    tbody.innerHTML = "";
+    parts.forEach(([name, score]) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${name}</td><td>${fmt(score)}</td>`;
+      tbody.appendChild(tr);
+    });
+
+    document.getElementById("detailArea").style.display = "block";
+    window.scrollTo({top:0, behavior:"smooth"});
+  }
+
+  function resetAll(){
+    // إعادة القوائم
+    ["preg","dtype","ddur","hypo","a1c","gmon","hyperE","macroV","egfr","microC","cog","labor","edu","fhours"]
+      .forEach(id => document.getElementById(id).selectedIndex = 0);
+
+    // إلغاء الاختيارات في العلاج
+    document.querySelectorAll("#txChecks input[type='checkbox']").forEach(ch => ch.checked = false);
+
+    // تفريغ بيانات المريض
+    document.getElementById("pname").value = "";
+    document.getElementById("page").value = "";
+    document.getElementById("psex").selectedIndex = 0;
+    setToday();
+    document.getElementById("patientPrint").style.display = "none";
+
+    // إعادة النتيجة
+    const res = document.getElementById("res");
+    res.className = "resultBox";
+    res.innerHTML = `<p class="bigScore">—</p><p class="small">اضغط “احسب النتيجة” لعرض مجموع النقاط.</p>`;
+    document.getElementById("detailArea").style.display = "none";
+  }
+
+  setQR();
+  setToday();
+</script>
+</body>
+</html>
